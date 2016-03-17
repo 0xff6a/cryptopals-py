@@ -54,9 +54,38 @@ def test_from_bin():
 
     assert_equal(buf.to_string(), 'Az')
 
+def test_to_file():
+    filepath = './tests/resources/buf_out_test.txt'
+    buf = Buffer('to file test')
+
+    buf.to_file(filepath, 'hex')
+    data = open(filepath, 'r').read()
+
+    assert_equal(data, '746f2066696c652074657374')
+
+def test_from_file():
+    buf = Buffer.from_file('./tests/resources/buf_in_test.txt', 'b64')
+
+    assert_equal(buf.to_string(), 'Buffer from file test')
+
 def test_xor():
     buf1 = Buffer('abc')
     buf2 = Buffer('   ')
     xord = buf1.xor(buf2)
 
     assert_equal(xord.to_string(), 'ABC')
+
+def test_concat():
+    buf1 = Buffer('abc')
+    buf2 = Buffer('xyz')
+    combined = buf1.concat(buf2)
+
+    assert_equal(combined.to_string(), 'abcxyz')
+
+def test_map():
+    buf1 = Buffer([1, 2, 3])
+    squared = lambda x: x**2
+    buf2 = buf1.map(squared)
+
+    assert_equal(buf1.bytes, [1, 2, 3])
+    assert_equal(buf2.bytes, [1, 4, 9])

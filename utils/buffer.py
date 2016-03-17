@@ -42,7 +42,7 @@ class Buffer(object):
     @classmethod
     def from_file(_class, filepath, encoding):
         """Create a new buffer from the contents of a file"""
-        fo = file.open(filepath, 'r')
+        fo = open(filepath, 'r')
         raw = fo.read()
         fo.close()
 
@@ -108,11 +108,6 @@ class Buffer(object):
         fo.write(out_data)
         fo.close()
 
-    def map(self, func):
-        """Map each byte of a buffer using supplied func"""
-        for byte in self.__data:
-            byte
-
     def xor(self, buffer):
         """Return XORed bytes of each buffer (up to size of current buffer)"""
         result = self.__class__.init(self.size)
@@ -124,3 +119,16 @@ class Buffer(object):
 
     def concat(self, buffer):
         """Concatenate the buffer with another"""
+        self.__data.extend(buffer.bytes)
+
+        return self
+
+    def map(self, func):
+        """Map the buffer to another using a func lambda"""
+        raw_in = self.__data
+        out = self.__class__.init(self.size)
+
+        for i in range(self.size):
+            out.set(i, func(raw_in[i]))
+
+        return out
