@@ -124,7 +124,7 @@ class Buffer(object):
         return self
 
     def map(self, func):
-        """Map the buffer to another using a func lambda"""
+        """Map the buffer to a new buffer using a lambda"""
         raw_in = self.__data
         out = self.__class__.init(self.size)
 
@@ -132,3 +132,7 @@ class Buffer(object):
             out.set(i, func(raw_in[i]))
 
         return out
+
+    def copy(self):
+        """Copy a buffer into a new instance and return it"""
+        return self.__class__(self.__data)

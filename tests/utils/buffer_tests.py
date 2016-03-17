@@ -89,3 +89,10 @@ def test_map():
 
     assert_equal(buf1.bytes, [1, 2, 3])
     assert_equal(buf2.bytes, [1, 4, 9])
+
+def test_copy():
+    buf1 = Buffer([1, 2, 3])
+    buf2 = buf1.copy()
+
+    assert_equal(buf2.bytes, [1, 2, 3])
+    assert_not_equal(id(buf1), id(buf2))
