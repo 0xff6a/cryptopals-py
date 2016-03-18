@@ -1,9 +1,7 @@
-import gmpy2
+import gmpy2 as GMP
 
 from utils import Buffer
-from Crypto import Random
 from Crypto.Hash import SHA256
-from gmpy2 import mpz
 
 class KeyPair(object):
     """Diffie-Hellman public/private key pair"""
@@ -12,7 +10,7 @@ class KeyPair(object):
     def __init__(self, p, g):
         """ Generate the key pair based on the DH p and g parameters"""
         dh_a = self.__random_int(p)
-        dh_A = gmpy2.powmod(g, dh_a, p)
+        dh_A = GMP.powmod(g, dh_a, p)
 
         self.__dh_p = p
         self.__dh_g = g
@@ -29,7 +27,7 @@ class KeyPair(object):
 
     def session_key(self, public_B):
         """Generate a session secret given the other party's public key"""
-        raw_secret = gmpy2.powmod(public_B, self.__secret_key, self.__dh_p)
+        raw_secret = GMP.powmod(public_B, self.__secret_key, self.__dh_p)
 
         # Hash the secret to create a key
         h_256 = SHA256.new()
@@ -40,7 +38,7 @@ class KeyPair(object):
 
     def __random_int(self, modulo):
         """Generate a random number modulo the supplied argument"""
-        r_state = gmpy2.random_state()
-        raw = gmpy2.mpz_urandomb(r_state, self.RANDOM_BITS)
+        r_state = GMP.random_state()
+        raw = GMP.mpz_urandomb(r_state, self.RANDOM_BITS)
 
-        return gmpy2.t_mod(raw, modulo)
+        return GMP.t_mod(raw, modulo)
