@@ -1,6 +1,6 @@
 from nose.tools import *
 
-from utils import *
+from utils import Buffer
 
 def test_properties():
     buf = Buffer([1, 2, 3])
