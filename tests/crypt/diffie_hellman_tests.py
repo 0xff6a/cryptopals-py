@@ -19,8 +19,8 @@ def test_session_key():
     assert_equal(alice_secret.bytes, bob_secret.bytes)
 
 def test_real_session_key():
-    alice_keys = KeyPair()
-    bob_keys = KeyPair()
+    alice_keys = KeyPair() # uses NIST parameters by default
+    bob_keys = KeyPair() # uses NIST parameters by default
 
     alice_secret = alice_keys.session_key(bob_keys.get_public())
     bob_secret = bob_keys.session_key(alice_keys.get_public())

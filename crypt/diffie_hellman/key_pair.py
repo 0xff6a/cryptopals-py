@@ -1,9 +1,10 @@
-import gmpy2 as gmp
 import os
+
+import gmpy2 as gmp
+from gmpy2 import mpz
 
 from utils import Buffer
 from Crypto.Hash import SHA256
-from gmpy2 import mpz
 
 class KeyPair(object):
     """Diffie-Hellman public/private key pair"""

@@ -1,7 +1,8 @@
-from gmpy2 import mpz
-from array import array
 import base64
 import binascii
+
+from array import array
+from gmpy2 import mpz
 
 SZ_BYTE = 8
 
