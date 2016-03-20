@@ -1,3 +1,4 @@
+from gmpy2 import mpz
 from array import array
 import base64
 import binascii
@@ -55,6 +56,16 @@ class Buffer(object):
         else:
             return cls(raw)
 
+    @classmethod
+    def from_mpz(cls, n_mpz):
+        """ Create a new buffer from a gmpy2 arbitrary precision integer"""
+        if n_mpz.num_digits(16) % 2 != 0:
+            instr_hex = '0' + n_mpz.digits(16)
+        else:
+            instr_hex = n_mpz.digits(16)
+
+        return cls.from_hex(instr_hex)
+
     @property
     def bytes(self):
         """Returns an array of buffer bytes"""
@@ -107,6 +118,10 @@ class Buffer(object):
         file_obj = open(filepath, 'w', 1)
         file_obj.write(out_data)
         file_obj.close()
+
+    def to_mpz(self):
+        """Transform the buffer to a GMP arbitrary precision integer"""
+        return mpz(self.to_hex(), 16)
 
     def xor(self, buf):
         """Return XORed bytes of each buffer (up to size of current buffer)"""

@@ -1,6 +1,7 @@
 from nose.tools import *
 
 from utils import Buffer
+from gmpy2 import mpz
 
 def test_properties():
     buf = Buffer([1, 2, 3])
@@ -67,6 +68,17 @@ def test_from_file():
     buf = Buffer.from_file('./tests/resources/buf_in_test.txt', 'b64')
 
     assert_equal(buf.to_string(), 'Buffer from file test')
+
+def test_to_mpz():
+    buf = Buffer([255, 255])
+
+    assert_equal(buf.to_mpz(), mpz(65535))
+
+def test_from_mpz():
+    n_mpz = mpz('65535')
+    buf = Buffer.from_mpz(n_mpz)
+
+    assert_equal(buf.bytes, [255, 255])
 
 def test_xor():
     buf1 = Buffer('abc')
