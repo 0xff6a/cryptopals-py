@@ -1,11 +1,10 @@
 import socket
-import struct
-import xdrlib
 
-from enum import Enum
 from Crypto.Cipher import AES
+
 from key_pair import KeyPair
 from message import Message
+from utils.buffer import Buffer
 
 class MessageServer(object):
     """Simple message server for encrypted communications
@@ -70,7 +69,7 @@ class MessageServer(object):
         raw = conn.recv(self.BUFFER_SIZE)
         recv_msg = Message.from_buffer(raw)
 
-        assert recv_msg['code'] != Message.KEY_EXCHG,
+        assert recv_msg['code'] == Message.KEY_EXCHG,
             'Unexpected message code during key exchange: %d' % recv_msg['code']
 
         # Create the shared secret
@@ -87,22 +86,22 @@ class MessageServer(object):
 
         ciphertext = recv_msg['client_msg']
 
-        assert len(ciphertext) <= AES_IV_SIZE , 'Invalid client message size'
+        assert len(ciphertext) > self.AES_IV_SIZE , 'Invalid client message size'
 
         # Decrypt the received ciphertext using AES-CBC (16-bit IV prepended)
-        iv = ciphertext[0:AES_IV_SIZE]
-        ciphertext = ciphertext[AES_IV_SIZE:]
+        iv = ciphertext[0:self.AES_IV_SIZE]
+        ciphertext = ciphertext[self.AES_IV_SIZE:]
         cipher = AES.new(self._session_secret, AES.MODE_CBC, iv)
 
-        # Store the decrypted message and IV
-        self._iv = iv
+        # Store the decrypted message
         self._echo_msg = cipher.decrypt(ciphertext)
 
     def _echo_msg(self, conn):
         """Send an encrypted server echo response"""
         # Re-encrypt the echo message
-        cipher = AES.new(self._session_secret, AES.MODE_CBC, self._iv)
-        ciphertext = self._iv
+        iv = Random.new().read(self.AES_IV_SIZE)
+        cipher = AES.new(self._session_secret, AES.MODE_CBC, iv)
+        ciphertext = iv
         ciphertext += cipher.encrypt(self._echo_msg)
 
         # Create the message object with encoded echo message
