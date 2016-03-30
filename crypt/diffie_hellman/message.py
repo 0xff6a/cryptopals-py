@@ -17,17 +17,28 @@ class Message(object):
             self._fix_params(data_items)
         elif code == self.KEY_EXCHG:
             self._key_exchg(data_items)
-        elif code == self.SEND_ENC:
-            self._send_enc(data_items)
-        elif code == self.RECV_ENC:
-            self._recv_enc(data_items)
+        elif code == self.SEND_ENC or code == self.RECV_ENC:
+            self._msg_data(code, data_items)
         else:
             raise AssertionError('Unknown message code', code)
 
     @classmethod
     def from_buffer(cls, data):
         """Build a message construct from a string buffer"""
+        raw = xdrlib.Unpacker(data)
 
+        code = raw.unpack_int()
+
+        if code == cls.FIX_PARAMS:
+            return cls(code, dh_p=raw.unpack_string(),dh_g=raw.unpack_string())
+        elif code == cls.KEY_EXCHG:
+            return cls(code, public_key=raw.unpack_string())
+        elif code == cls.SEND_ENC:
+            return cls(code, server_msg=raw.unpack_string())
+        elif code == cls.RECV_ENC:
+            return cls(code, client_msg=raw.unpack_string())
+        else:
+            raise AssertionError('Unknown message code', code)
 
     @property
     def buffer(self):
@@ -67,5 +78,23 @@ class Message(object):
         packer = xdrlib.Packer()
         packer.pack_int(self.KEY_EXCHG)
         packer.pack_string(data_items['public_key'])
+
+        self._packed = packer
+
+    def _msg_data(self, code, data):
+        """Send/receive the data for a SEND_ENC/RECV_ENC message"""
+        if len(data) != 1:
+            raise AssertionError(
+                'Invalid arguments for SEND_ENC/RECV_ENC message'
+            )
+
+        # Pack the data using xdrlib
+        packer = xdrlib.Packer()
+        packer.pack_int(code)
+
+        if code == self.SEND_ENC:
+            packer.pack_string(data['server_msg'])
+        else:
+            packer.pack_string(data['client_msg'])
 
         self._packed = packer
