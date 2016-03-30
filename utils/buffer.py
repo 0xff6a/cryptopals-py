@@ -9,7 +9,7 @@ SZ_BYTE = 8
 class Buffer(object):
     """"Generic buffer object to hold binary data for manipulation"""
     def __init__(self, data):
-        self.__data = array('B', data)
+        self._data = array('B', data)
 
     @classmethod
     def init(cls, size, value=0):
@@ -70,24 +70,24 @@ class Buffer(object):
     @property
     def bytes(self):
         """Returns an array of buffer bytes"""
-        return self.__data.tolist()
+        return self._data.tolist()
 
     @property
     def size(self):
         """Returns the buffer size (bytes)"""
-        return len(self.__data)
+        return len(self._data)
 
     def get(self, index):
         """Get the byte value at index"""
-        return self.__data[index]
+        return self._data[index]
 
     def set(self, index, value):
         """Set the byte value at index"""
-        self.__data[index] = value
+        self._data[index] = value
 
     def to_string(self):
         """Converts a buffer to an ASCII string"""
-        return self.__data.tostring()
+        return self._data.tostring()
 
     def to_b64(self):
         """Converts the buffer to a base64 encoded string"""
@@ -100,7 +100,7 @@ class Buffer(object):
     def to_bin(self):
         """Converts the buffer to a binary encoded string"""
         out_str = ''
-        for byte in self.__data:
+        for byte in self._data:
             out_str += format(byte, '08b')
 
         return out_str
@@ -135,13 +135,13 @@ class Buffer(object):
 
     def concat(self, buf):
         """Concatenate the buffer with another"""
-        self.__data.extend(buf.bytes)
+        self._data.extend(buf.bytes)
 
         return self
 
     def map(self, func):
         """Map the buffer to a new buffer using a lambda"""
-        raw_in = self.__data
+        raw_in = self._data
         out = self.__class__.init(self.size)
 
         for i in range(self.size):
@@ -151,4 +151,4 @@ class Buffer(object):
 
     def copy(self):
         """Copy a buffer into a new instance and return it"""
-        return self.__class__(self.__data)
+        return self.__class__(self._data)

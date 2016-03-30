@@ -1,1 +1,1 @@
-import diffie_hellman_tests
+from diffie_hellman import *

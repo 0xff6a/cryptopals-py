@@ -23,28 +23,28 @@ class KeyPair(object):
 
     def __init__(self, p=P_NIST, g=G_NIST):
         """ Generate the key pair based on the DH p and g parameters"""
-        dh_a = self.__random_int(p)
+        dh_a = self._random_int(p)
         dh_A = gmp.powmod(g, dh_a, p)
 
-        self.__dh_p = p
-        self.__dh_g = g
-        self.__secret_key = dh_a
-        self.__public_key = dh_A
+        self._dh_p = p
+        self._dh_g = g
+        self._secret_key = dh_a
+        self._public_key = dh_A
 
     def get_public(self):
         """Return the public key as a Buffer instance"""
-        return Buffer.from_mpz(self.__public_key)
+        return Buffer.from_mpz(self._public_key)
 
     def get_secret(self):
         """Return the private key as a Buffer instance"""
-        return Buffer.from_mpz(self.__secret_key)
+        return Buffer.from_mpz(self._secret_key)
 
     def session_key(self, public_B):
         """Generate a session secret given the other party's public key"""
         raw_secret = gmp.powmod(
             public_B.to_mpz(),
-            self.__secret_key,
-            self.__dh_p
+            self._secret_key,
+            self._dh_p
         )
 
         # Hash the secret to create a key
@@ -54,7 +54,7 @@ class KeyPair(object):
 
         return Buffer(raw_key)
 
-    def __random_int(self, modulo):
+    def _random_int(self, modulo):
         """Generate a random number modulo the supplied argument"""
         r_seed = int(os.urandom(32).encode('hex'), 16)
         r_state = gmp.random_state(r_seed)
