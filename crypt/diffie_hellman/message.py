@@ -6,7 +6,7 @@ class Message(object):
     KEY_EXCHG = 2
     SEND_ENC = 3
     RECV_ENC = 4
-    
+
     def __init__(self, code, **data_items):
         """Initialize the message with a code and data items (variable length)"""
         self.code = code
@@ -30,7 +30,7 @@ class Message(object):
         code = raw.unpack_int()
 
         if code == cls.FIX_PARAMS:
-            return cls(code, dh_p=raw.unpack_string(),dh_g=raw.unpack_string())
+            return cls(code, dh_p=raw.unpack_string(), dh_g=raw.unpack_string())
         elif code == cls.KEY_EXCHG:
             return cls(code, public_key=raw.unpack_string())
         elif code == cls.SEND_ENC:

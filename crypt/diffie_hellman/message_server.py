@@ -1,6 +1,7 @@
 import socket
 
 from Crypto.Cipher import AES
+from Crypto import Random
 
 from key_pair import KeyPair
 from message import Message
@@ -10,17 +11,19 @@ class MessageServer(object):
     """Simple message server for encrypted communications
      using Diffie-Hellman key exchange"""
 
-     TCP_IP = '127.0.0.1'
-     TCP_PORT = 9090
-     BUFFER_SIZE = 1024
-     AES_IV_SIZE = 16
+    TCP_IP = '127.0.0.1'
+    TCP_PORT = 9090
+    BUFFER_SIZE = 1024
+    AES_IV_SIZE = 16
 
-     def __init__(self):
+    def __init__(self):
         """Initialize a DH key pair and start listening for client connections"""
         self._keys = KeyPair()
+        self._session_secret = None
+        self._echo_msg = None
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind((TCP_IP, TCP_PORT))
+        sock.bind((self.TCP_IP, self.TCP_PORT))
         sock.listen(1)
 
         conn, addr = sock.accept()
@@ -40,7 +43,7 @@ class MessageServer(object):
         self._read_msg(conn)
 
         # 4) Echo encrypted reply
-        self._echo_msg(conn)
+        self._send_echo(conn)
 
         conn.close()
 
@@ -69,7 +72,7 @@ class MessageServer(object):
         raw = conn.recv(self.BUFFER_SIZE)
         recv_msg = Message.from_buffer(raw)
 
-        assert recv_msg['code'] == Message.KEY_EXCHG,
+        assert recv_msg['code'] == Message.KEY_EXCHG, \
             'Unexpected message code during key exchange: %d' % recv_msg['code']
 
         # Create the shared secret
@@ -81,12 +84,12 @@ class MessageServer(object):
         raw = conn.recv(self.BUFFER_SIZE)
         recv_msg = Message.from_buffer(raw)
 
-        assert recv_msg['code'] == Message.RECV_ENC,
+        assert recv_msg['code'] == Message.RECV_ENC, \
             'Unexpected message code during receive: %d' % recv_msg['code']
 
         ciphertext = recv_msg['client_msg']
 
-        assert len(ciphertext) > self.AES_IV_SIZE , 'Invalid client message size'
+        assert len(ciphertext) > self.AES_IV_SIZE, 'Invalid client message size'
 
         # Decrypt the received ciphertext using AES-CBC (16-bit IV prepended)
         iv = ciphertext[0:self.AES_IV_SIZE]
@@ -96,7 +99,7 @@ class MessageServer(object):
         # Store the decrypted message
         self._echo_msg = cipher.decrypt(ciphertext)
 
-    def _echo_msg(self, conn):
+    def _send_echo(self, conn):
         """Send an encrypted server echo response"""
         # Re-encrypt the echo message
         iv = Random.new().read(self.AES_IV_SIZE)

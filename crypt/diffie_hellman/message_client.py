@@ -10,19 +10,23 @@ from utils.buffer import Buffer
 
 class MessageClient(object):
     """Simple message client for encrypted communications
-     using Diffie-Hellman key exchange"""
+        using Diffie-Hellman key exchange
+    """
 
-     SERVER_IP = '127.0.0.1'
-     SERVER_PORT = 9090
-     BUFFER_SIZE = 1024
-     AES_IV_SIZE = 16
+    SERVER_IP = '127.0.0.1'
+    SERVER_PORT = 9090
+    BUFFER_SIZE = 1024
+    AES_IV_SIZE = 16
 
-     def __init__(self, message):
+    def __init__(self, message):
         """Connect to the message server and perform a secure echo exchange"""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((TCP_IP, TCP_PORT))
+        sock.connect((self.SERVER_IP, self.SERVER_PORT))
 
         self._message = message
+        self._keys = None
+        self._session_secret = None
+
         self._check_echo(sock)
 
     def _check_echo(self, sock):
@@ -43,10 +47,10 @@ class MessageClient(object):
 
     def _fix_parameters(self, sock):
         """Receive the DH p, g parameters to generate a key pair"""
-        raw = sock.recv(BUFFER_SIZE)
+        raw = sock.recv(self.BUFFER_SIZE)
         recv_msg = Message.from_buffer(raw)
 
-        assert recv_msg['code'] == Message.FIX_PARAMS,
+        assert recv_msg['code'] == Message.FIX_PARAMS, \
             'Unexpected message code during key exchange: %d' % recv_msg['code']
 
         dh_p = mpz(recv_msg['dh_p'])
@@ -60,7 +64,7 @@ class MessageClient(object):
         raw = sock.recv(self.BUFFER_SIZE)
         recv_msg = Message.from_buffer(raw)
 
-        assert recv_msg['code'] == Message.KEY_EXCHG,
+        assert recv_msg['code'] == Message.KEY_EXCHG, \
             'Unexpected message code during key exchange: %d' % recv_msg['code']
 
         # Create the shared secret
@@ -74,7 +78,7 @@ class MessageClient(object):
         msg = Message(Message.KEY_EXCHG, public_key=public_key)
 
         # Send the message buffer
-        conn.send(msg.buffer)
+        sock.send(msg.buffer)
 
     def _send_msg(self, sock):
         """Send an encrypted message to the server"""
@@ -95,12 +99,12 @@ class MessageClient(object):
         raw = sock.recv(self.BUFFER_SIZE)
         recv_msg = Message.from_buffer(raw)
 
-        assert recv_msg['code'] == Message.SEND_ENC,
+        assert recv_msg['code'] == Message.SEND_ENC, \
             'Unexpected message code during receive: %d' % recv_msg['code']
 
         ciphertext = recv_msg['server_msg']
 
-        assert len(ciphertext) > self.AES_IV_SIZE , 'Invalid server message size'
+        assert len(ciphertext) > self.AES_IV_SIZE, 'Invalid server message size'
 
         # Decrypt the received ciphertext using AES-CBC (16-bit IV prepended)
         iv = ciphertext[0:self.AES_IV_SIZE]
