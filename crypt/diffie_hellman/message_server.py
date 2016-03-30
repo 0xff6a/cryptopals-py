@@ -3,14 +3,9 @@ import struct
 import xdrlib
 
 from enum import Enum
+from Crypto.Cipher import AES
 from key_pair import KeyPair
-
-# TODO extract to separate file and share with client
-class Code(Enum):
-    FIX_PARAMS
-    KEY_EXCHG
-    SEND_MSG
-    RECV_MSG
+from message import Message
 
 class MessageServer(object):
     """Simple message server for encrypted communications
@@ -19,8 +14,10 @@ class MessageServer(object):
      TCP_IP = '127.0.0.1'
      TCP_PORT = 9090
      BUFFER_SIZE = 1024
+     AES_IV_SIZE = 16
 
      def __init__(self):
+        """Initialize a DH key pair and start listening for client connections"""
         self._keys = KeyPair()
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -34,57 +31,82 @@ class MessageServer(object):
 
     def _handle(self, conn):
         # Run through protocol...
-        # 1 Fix parameters
-        # 2 Exchange keys
-        # 3 Send encrypted hello
-        # 4 read encrypted reply
+        # 1) Fix parameters
+        self._fix_parameters(conn)
 
-        # use pack/unpack for message transfer
+        # 2) Exchange keys
+        self._key_exchange(conn)
+
+        # 3) Read encrypted msg
+        self._read_msg(conn)
+
+        # 4) Echo encrypted reply
+        self._echo_msg(conn)
+
         conn.close()
 
     def _fix_parameters(self, conn):
         """Fix the DH p, g parameters to use in key exchange"""
-        msg_code = Code.FIX_PARAMS
         fixed_p = KeyPair.P_NIST.digits(16)
         fixed_g = KeyPair.G_NIST.digits(16)
 
-        # Pack the data using xdrlib
-        packer = xdrlib.Packer()
-        packer.pack_int(msg_code)
-        packer.pack_string(fixed_p)
-        packer.pack_string(fixed_g)
+        # Create the message object with our DH parameters
+        msg = Message(Message.FIX_PARAMS, dh_p=fixed_p, dh_g=fixed_g)
 
-        # Send the data
-        conn.send(packer.get_buffer())
+        # Send the message buffer
+        conn.send(msg.buffer)
 
     def _key_exchange(self, conn):
         """Initiate a DH key exchange (send/receive public keys)"""
-        msg_code = Code.KEY_EXCHG
         public_key = self._keys.get_public().to_hex()
 
-        # Pack the data using xdrlib
-        packer = xdrlib.Packer()
-        packer.pack_int(msg_code)
-        packer.pack_string(public_key)
+        # Create the message object with server public key
+        msg = Message(Message.KEY_EXCHG, public_key=public_key)
 
-        # Send the data
-        conn.send(packer.get_buffer())
+        # Send the message buffer
+        conn.send(msg.buffer)
 
         # Read the client public key
-        raw = xdrlib.Unpacker(conn.recv(self.BUFFER_SIZE))
-        recv_code = raw.unpack_int()
-        recv_pub = raw.unpack_string()
+        raw = conn.recv(self.BUFFER_SIZE)
+        recv_msg = Message.from_buffer(raw)
 
-        if recv_code != Code.KEY_EXCHG
-            raise AssertionError('Unexpected message code', recv_code)
+        assert recv_msg['code'] != Message.KEY_EXCHG,
+            'Unexpected message code during key exchange: %d' % recv_msg['code']
 
         # Create the shared secret
-        buf = Buffer.from_hex(recv_pub)
+        buf = Buffer.from_hex(recv_msg['public_key'])
         self._session_secret = self._keys.session_key(buf)
-
-    def _send_msg(self, conn):
-        """Send an encrypted server hello"""
-
 
     def _read_msg(self, conn):
         """Receive the encrypted client response"""
+        raw = conn.recv(self.BUFFER_SIZE)
+        recv_msg = Message.from_buffer(raw)
+
+        assert recv_msg['code'] == Message.RECV_ENC,
+            'Unexpected message code during receive: %d' % recv_msg['code']
+
+        ciphertext = recv_msg['client_msg']
+
+        assert len(ciphertext) <= AES_IV_SIZE , 'Invalid client message size'
+
+        # Decrypt the received ciphertext using AES-CBC (16-bit IV prepended)
+        iv = ciphertext[0:AES_IV_SIZE]
+        ciphertext = ciphertext[AES_IV_SIZE:]
+        cipher = AES.new(self._session_secret, AES.MODE_CBC, iv)
+
+        # Store the decrypted message and IV
+        self._iv = iv
+        self._echo_msg = cipher.decrypt(ciphertext)
+
+    def _echo_msg(self, conn):
+        """Send an encrypted server echo response"""
+        # Re-encrypt the echo message
+        cipher = AES.new(self._session_secret, AES.MODE_CBC, self._iv)
+        ciphertext = self._iv
+        ciphertext += cipher.encrypt(self._echo_msg)
+
+        # Create the message object with encoded echo message
+        echo_msg = Message(Message.SEND_ENC, server_msg=ciphertext)
+
+        # Send the message buffer
+        conn.send(echo_msg.buffer)

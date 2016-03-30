@@ -6,7 +6,7 @@ class Message(object):
     KEY_EXCHG = 2
     SEND_ENC = 3
     RECV_ENC = 4
-
+    
     def __init__(self, code, **data_items):
         """Initialize the message with a code and data items (variable length)"""
         self.code = code
@@ -20,7 +20,7 @@ class Message(object):
         elif code == self.SEND_ENC or code == self.RECV_ENC:
             self._msg_data(code, data_items)
         else:
-            raise AssertionError('Unknown message code', code)
+            raise LookupError('Unknown message code', code)
 
     @classmethod
     def from_buffer(cls, data):
@@ -38,7 +38,7 @@ class Message(object):
         elif code == cls.RECV_ENC:
             return cls(code, client_msg=raw.unpack_string())
         else:
-            raise AssertionError('Unknown message code', code)
+            raise LookupError('Unknown message code', code)
 
     @property
     def buffer(self):
@@ -58,8 +58,7 @@ class Message(object):
 
     def _fix_params(self, data_items):
         """Pack the data for a FIX_PARAMS message"""
-        if len(data_items) != 2:
-            raise AssertionError('Invalid arguments for FIX_PARAMS message')
+        assert len(data_items) == 2, 'Invalid arguments for FIX_PARAMS message'
 
         # Pack the data using xdrlib
         packer = xdrlib.Packer()
@@ -71,8 +70,7 @@ class Message(object):
 
     def _key_exchg(self, data_items):
         """Pack the data for a KEY_EXCHG message"""
-        if len(data_items) != 1:
-            raise AssertionError('Invalid arguments for KEY_EXCHG message')
+        assert len(data_items) == 1, 'Invalid arguments for KEY_EXCHG message'
 
         # Pack the data using xdrlib
         packer = xdrlib.Packer()
@@ -82,11 +80,8 @@ class Message(object):
         self._packed = packer
 
     def _msg_data(self, code, data):
-        """Send/receive the data for a SEND_ENC/RECV_ENC message"""
-        if len(data) != 1:
-            raise AssertionError(
-                'Invalid arguments for SEND_ENC/RECV_ENC message'
-            )
+        """Pack the data for a SEND_ENC/RECV_ENC message"""
+        assert len(data) == 1, 'Invalid arguments for SEND_ENC/RECV_ENC message'
 
         # Pack the data using xdrlib
         packer = xdrlib.Packer()
